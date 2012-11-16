@@ -15,3 +15,389 @@
 *.exe
 *.out
 *.app
+requerer  "rack / utils '
+
+módulo  rack
+  Rack # :: Pedido fornece uma interface conveniente para um Rack
+  # Ambiente. Ele é apátrida, o ambiente + env + passado para o
+  # Construtor irá ser modificadas diretamente.
+  #
+  # Req = Rack :: Request.new (env)
+  # Req.post?
+  # Req.params ["dados"]
+  #
+  # O hash ambiente passado irá armazenar uma referência ao objeto Request
+  # Instanciado de forma que ela só vai instanciar se uma instância da Solicitação
+  # Objeto já não existe.
+
+  classe  Pedido
+    # O ambiente do pedido.
+    attr_reader  : env
+
+    def  initialize ( env )
+      @ Env  =  env
+    final
+
+    def  corpo ;             @ env [ "rack.input" ]                        final
+    def  script_name ;      @ env [ "SCRIPT_NAME" ]. to_s                  final
+    def  PATH_INFO ;        @ env [ "PATH_INFO" ]. to_s                    final
+    def  REQUEST_METHOD ;   @ env [ "REQUEST_METHOD" ]                    final
+    def  query_string ;     @ env [ "QUERY_STRING" ]. to_s                 final
+    def  content_length ;   @ env [ 'CONTENT_LENGTH' ]                    final
+
+    def  content_type
+      content_type  =  @ env [ 'CONTENT_TYPE' ]
+      content_type . nulo?  | |  content_type . vazio?  ?  nulo  :  content_type
+    final
+
+    def  sessão ;          @ env [ 'rack.session' ]  | = |  {}               final
+    def  session_options ;  @ env [ 'rack.session.options' ]  | = |  {}       final
+    def  logger ;           @ env [ 'rack.logger' ]                       final
+
+    Parte # O tipo de mídia (tipo / subtipo) do cabeçalho CONTENT_TYPE
+    # Sem quaisquer parâmetros de tipo de mídia. por exemplo, quando é CONTENT_TYPE
+    # "Text / plain; charset = UTF-8", o tipo de mídia é "text / plain".
+    #
+    # Para mais informações sobre o uso de tipos de mídia em HTTP, veja:
+    # # Http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html sec3.7
+    def  media_type
+      content_type  &&  content_type . divisão ( / \ s * [;,] \ s * / ,  2 ) . primeiro . downcase
+    final
+
+    # Os parâmetros de tipo de mídia fornecidos em CONTENT_TYPE como um Hash, ou
+    # Hash um vazio se não CONTENT_TYPE ou de tipo de mídia parâmetros foram
+    # Fornecida. por exemplo, quando o CONTENT_TYPE é "text / plain; charset = UTF-8",
+    # Método este responde com o Hash seguinte:
+    # {'Charset' => 'UTF-8'}
+    def  media_type_params
+      voltar  {}  se  content_type . nulo?
+      Hash [* content_type . divisão ( / \ s * [;,] \ s * / ) [ 1 . . - 1 ].
+        coletar  {  | s |  s . divisão ( '=' ,  2 )  } .
+        mapa  {  | k , v |  [ k . downcase ,  v ]  } . achatar ]
+    final
+
+    # O conjunto de caracteres do corpo da solicitação se um "charset" tipo de mídia
+    # Parâmetro foi dada, ou nulo se nenhum "charset" foi especificado. Nota
+    # Que, por RFC2616, tipos de texto / * de mídia que não especificar explícita
+    # Charset devem ser considerados ISO-8859-1.
+    def  content_charset
+      media_type_params [ 'charset' ]
+    final
+
+    def  esquema
+      se  @ env [ 'HTTPS' ]  ==  'on'
+        'Https'
+      elsif  @ env [ 'HTTP_X_FORWARDED_SSL' ]  ==  'on'
+        'Https'
+      elsif  @ env [ 'HTTP_X_FORWARDED_SCHEME' ]
+        @ Env [ 'HTTP_X_FORWARDED_SCHEME' ]
+      elsif  @ env [ 'HTTP_X_FORWARDED_PROTO' ]
+        @ Env [ 'HTTP_X_FORWARDED_PROTO' ]. divisão ( ',' ) [ 0 ]
+      outro
+        @ Env [ "rack.url_scheme" ]
+      final
+    final
+
+    def  ssl?
+      esquema  ==  'https'
+    final
+
+    def  host_with_port
+      se  encaminhado  =  @ env [ "HTTP_X_FORWARDED_HOST" ]
+        encaminhado . divisão ( /, \ s? / ) . última
+      outro
+        @ Env [ 'HTTP_HOST' ]  | |  " # { @ env [ 'SERVER_NAME' ]  | |  @ env [ 'SERVER_ADDR' ] } : # { @ env [ 'SERVER_PORT' ] } "
+      final
+    final
+
+    def  porta
+      se  porta  =  host_with_port . divisão ( / :/ ) [ 1 ]
+        porta . to_i
+      elsif  porta  =  @ env [ 'HTTP_X_FORWARDED_PORT' ]
+        porta . to_i
+      elsif  ssl?
+        443
+      elsif  @ env . has_key? ( "HTTP_X_FORWARDED_HOST" )
+        80
+      outro
+        @ Env [ "SERVER_PORT" ]. to_i
+      final
+    final
+
+    def  anfitrião
+      # Retire o número de porta.
+      host_with_port . to_s . gsub ( /: \ d + \ z / ,  '' )
+    final
+
+    def  script_name = ( s );  @ env [ "SCRIPT_NAME" ]  =  s . to_s              final
+    def  PATH_INFO = ( s );    @ env [ "PATH_INFO" ]  =  s . to_s                final
+
+
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se ele era do tipo APAGAR
+    def  apagar? ;   REQUEST_METHOD  ==  "DELETE"   final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se ele era do tipo GET
+    def  começar? ;      REQUEST_METHOD  ==  "GET"      final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se ele estava de cabeça de tipo
+    def  cabeça? ;     REQUEST_METHOD  ==  "HEAD"     final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se era de opções de tipo
+    def  opções? ;  REQUEST_METHOD  ==  "OPTIONS"  final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se era de PATCH tipo
+    def  patch? ;    REQUEST_METHOD  ==  "patch"    final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se era de POST tipo
+    def  pós? ;     REQUEST_METHOD  ==  "POST"     final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se ele era do tipo PUT
+    def  colocar? ;      REQUEST_METHOD  ==  "PUT"      final
+    
+    # Verifica o método de solicitação HTTP (ou verbo) para ver se era de TRACE tipo
+    def  traço? ;    REQUEST_METHOD  ==  "TRACE"    final
+
+
+    # O conjunto de formulário de dados-tipos de mídia. Pedidos que não indicam
+    # Um dos tipos de mídia apresenta nesta lista não serão elegíveis
+    # Para o formulário de dados / param análise.
+    FORM_DATA_MEDIA_TYPES  =  [
+      "Application / x-www-form-urlencoded" ,
+      "Multipart / form-data '
+    ]
+
+    # O conjunto de tipos de mídia. Pedidos que não indicam
+    # Um dos tipos de mídia apresenta nesta lista não serão elegíveis
+    # Para análise param como anexos de sabão ou multiparts genéricos
+    PARSEABLE_DATA_MEDIA_TYPES  =  [
+      "Multipart / related" ,
+      "Multipart / misto '
+    ]
+
+    # Determine se o corpo da solicitação contém formulário de dados, verificando-
+    # O pedido Content-Type para um dos tipos de mídia:
+    # "Application / x-www-form-urlencoded" ou "multipart / form-data". O
+    # Lista de tipos de formulário de dados de mídia pode ser modificada através do
+    # + + FORM_DATA_MEDIA_TYPES matriz.
+    #
+    # O corpo de um pedido é também assumida para conter formulário de dados, quando não
+    # Content-Type cabeçalho é fornecido eo REQUEST_METHOD é POST.
+    def  form_data?
+      tipo  =  media_type
+      meth  =  env [ "rack.methodoverride.original_method" ]  | |  env [ 'REQUEST_METHOD' ]
+      ( meth  ==  'POST'  &&  tipo . nulo? )  | |  FORM_DATA_MEDIA_TYPES . ? incluem ( tipo )
+    final
+
+    # Determine se o corpo da solicitação contém dados, verificando
+    # Media_type o pedido contra registradas análise de dados, tipos de mídia
+    def  parseable_data?
+      PARSEABLE_DATA_MEDIA_TYPES . incluir? ( media_type )
+    final
+
+    # Retorna os dados recebidos na cadeia de consulta.
+    def  GET
+      se  @ env [ "rack.request.query_string" ]  ==  query_string
+        @ Env [ "rack.request.query_hash" ]
+      outro
+        @ Env [ "rack.request.query_string" ]  =  query_string
+        @ Env [ "rack.request.query_hash" ]    =  parse_query ( query_string )
+      final
+    final
+
+    # Retorna os dados recebidos no corpo da solicitação.
+    #
+    # Este método tanto apoio application / x-www-form-urlencoded e
+    # Multipart / form-data.
+    def  POST
+      se  @ env [ "rack.input" ]. nulo?
+        levantar  "Missing rack.input"
+      elsif  @ env [ "rack.request.form_input" ]. eql?  @ env [ "rack.input" ]
+        @ Env [ "rack.request.form_hash" ]
+      elsif  form_data?  | |  parseable_data?
+        @ Env [ "rack.request.form_input" ]  =  @ env [ "rack.input" ]
+        a menos que  @ env [ "rack.request.form_hash" ]  =  parse_multipart ( env )
+          form_vars  =  @ env [ "rack.input" ]. ler
+
+          # Correção para postagens Safari Ajax que sempre anexar \ 0
+          # Form_vars.sub (/ \ 0 \ z /,'') # substituição desempenho!:
+          form_vars . fatia! ( - 1 )  se  form_vars [- 1 ]  ==  ? \ 0
+
+          @ Env [ "rack.request.form_vars" ]  =  form_vars
+          @ Env [ "rack.request.form_hash" ]  =  parse_query ( form_vars )
+
+          @ Env [ "rack.input" ]. retrocesso
+        final
+        @ Env [ "rack.request.form_hash" ]
+      outro
+        {}
+      final
+    final
+
+    # A união de dados GET e POST.
+    #
+    # Note que as modificações não serão persistentes no env. Use update_param ou delete_param se você quiser modificar destrutiva params.
+    def  params
+      @ Params  | | =  auto . GET . fundir ( auto . POST )
+    resgatar  EOFError
+      auto . GET . dup
+    final
+
+    # Destrutivamente atualizar um parâmetro, se é em GET e / ou POST. Retorna nil.
+    #
+    # O parâmetro é atualizado sempre que foi definido anteriormente, de modo GET, POST, ou ambos. Se não foi previamente definido, está inserido em GET.
+    #
+    # Env ['rack.input'] não é tocado.
+    def  update_param ( k ,  v )
+      encontrado  =  falso
+      se  auto . GET . has_key? ( k )
+        encontrado  =  verdadeiro
+        auto . GET [ k ]  =  v
+      final
+      se  auto . POST . has_key? ( k )
+        encontrado  =  verdadeiro
+        auto . POST [ k ]  =  v
+      final
+      a menos que  encontrou
+        auto . GET [ k ]  =  v
+      final
+      @ Params  =  nulo
+      zero
+    final
+
+    # Destrutivamente apagar um parâmetro, se é em GET ou POST. Retorna o valor do parâmetro excluído.
+    #
+    # Se o parâmetro é em GET e POST, o valor POST tem precedência já que é como funciona o # params.
+    #
+    # Env ['rack.input'] não é tocado.
+    def  delete_param ( k )
+      v  =  [  auto . POST . excluir ( k ),  auto . GET . excluir ( k )  ]. compacto . primeiro
+      @ Params  =  nulo
+      v
+    final
+
+    # Atalho para Request.Params tecla []
+    def  [] ( chave )
+      params [ chave . to_s ]
+    final
+
+    # Atalho para Request.Params [chave] = valor
+    #
+    # Note que as modificações não serão persistentes no env. Use update_param ou delete_param se você quiser modificar destrutiva params.
+    def  [] = ( chave ,  valor )
+      params [ chave . to_s ]  =  valor
+    final
+
+    # Como Hash # values_at
+    def  values_at ( * chaves )
+      chaves . mapa { | chave |  params [ chave ]  }
+    final
+
+    # Referer do cliente
+    def  referer
+      @ Env [ 'HTTP_REFERER' ]
+    final
+    apelido  referrer  referer
+
+    def  user_agent
+      @ Env [ 'HTTP_USER_AGENT' ]
+    final
+
+    def  biscoitos
+      de hash    =  @ env [ "rack.request.cookie_hash" ]  | | =  {}
+      corda  =  @ env [ "HTTP_COOKIE" ]
+
+      retornar  de hash  se  corda  ==  @ env [ "rack.request.cookie_string" ]
+      de hash . claro
+
+      # De acordo com a RFC 2109:
+      # Se vários cookies satisfazem os critérios acima, eles são ordenados em
+      # Header o Cookie de tal forma que aqueles com mais atributos caminho específico
+      # Preceder aqueles com menos específica. Ordenação em relação ao outro
+      # Atributos (por exemplo, domínio) não é especificado.
+      Utils . parse_query ( corda ,  ';' ) . cada  {  | k , v |  haxixe [ k ]  =  matriz  ===  v  ?  v . primeiro  :  v  }
+      @ Env [ "rack.request.cookie_string" ]  =  cadeia
+      Hash
+    resgate  =>  erro
+      erro . mensagem . substituição  "não pode analisar cabeçalho Cookie: # { erro . mensagem } "
+      aumentar
+    final
+
+    def  xhr?
+      @ Env [ "HTTP_X_REQUESTED_WITH" ]  ==  "XMLHttpRequest"
+    final
+
+    def  base_url
+      url  =  esquema  +  ":/ /"
+      url  <<  anfitrião
+
+      se  esquema  ==  "https"  &&  porta  =!  443  | |
+          esquema  ==  "http"  &&  porta  ! =  80
+        url  <<  ": # { porta } "
+      final
+
+      url
+    final
+
+    # Tenta retornar um remake do URL pedido original como uma string.
+    def  url
+      base_url  +  fullpath
+    final
+
+    def  caminho
+      script_name  +  PATH_INFO
+    final
+
+    def  fullpath
+      query_string . ? vazio  ?  caminho  :  " # { caminho } ? # { QUERY_STRING } "
+    final
+
+    def  accept_encoding
+      @ Env [ "HTTP_ACCEPT_ENCODING" ]. to_s . divisão ( / \ s *, \ s * / ) . mapa  se  | peça |
+        codificação ,  parâmetros  =  parte . divisão ( / \ s *; \ s * / ,  2 )
+        qualidade  =  1 . 0
+        se  os parâmetros  e  / \ aq = ([\ d.] +) /  = ~  parâmetros
+          qualidade  =  1 dólar . to_f
+        final
+        [ codificação ,  qualidade ]
+      final
+    final
+
+    def  trusted_proxy? ( ip )
+      ip =~ /^127\.0\.0\.1$|^(10|172\.(1[6-9]|2[0-9]|30|31)|192\.168)\.|^::1$|^fd[0-9a-f]{2}:.+|^localhost$|^unix$/i
+    final
+
+    def  ip
+      remote_addrs  =  split_ip_addresses ( @ env [ 'REMOTE_ADDR' ] )
+      remote_addrs  =  reject_trusted_ip_addresses ( remote_addrs )
+      
+      voltar  remote_addrs . primeiro  se  remote_addrs . algum?
+
+      forwarded_ips  =  split_ip_addresses ( @ env [ 'HTTP_X_FORWARDED_FOR' ] )
+
+      se  client_ip  =  @ env [ 'HTTP_CLIENT_IP' ]
+        # Se forwarded_ips não inclui o client_ip, pode ser uma
+        Tentativa de spoofing # ip, por isso, ignorar HTTP_CLIENT_IP
+        voltar  client_ip  se  forwarded_ips . incluir? ( client_ip )
+      final
+
+      retorno  reject_trusted_ip_addresses ( forwarded_ips ) . última  | |  @ env [ "REMOTE_ADDR" ]
+    final
+
+    protegido
+      def  split_ip_addresses ( ip_addresses )
+        ip_addresses  ?  ip_addresses . tira . divisão ( / [\ s] + / )  :  []
+      final
+
+      def  reject_trusted_ip_addresses ( ip_addresses )
+        ip_addresses . rejeitar  {  | ip |  ? trusted_proxy ( ip )  }
+      final
+
+      def  parse_query ( qs )
+        Utils . parse_nested_query ( qs )
+      final
+
+      def  parse_multipart ( env )
+        Cremalheira :: Multipart . parse_multipart ( env )
+      final
+  final
+final
